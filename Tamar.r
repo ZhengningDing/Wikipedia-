@@ -119,8 +119,12 @@ Body_shape%>%
   labs(x= "Age" ,y="Proportion of body shape mentioned in the age group")
 
 
+Grouped$variable <- factor(Grouped$variable,levels=c("career","education","family","relationships","height_weight","physical_appearance"))
+
+
 Grouped%>%
   ggplot(aes(x=Age,y=proportion, ymin=0, ymax=proportion, fill=Gender))+
+  facet_grid(.~ variable)+
   facet_wrap(~ variable,ncol = 2)+
   stat_smooth(geom="ribbon", ymin=0, alpha=0.3) +
   #geom_ribbon(stat=stat_smooth(), alpha=0.3)+
