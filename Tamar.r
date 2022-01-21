@@ -1,96 +1,129 @@
 library(tidyverse)
 
-data <- read_delim('person_data_allvariable.csv', delim = '|')
+data <- read_delim('person_data_full.csv', delim = '|')
 
 data_0_1 <- data %>%
-  #converting entries to binary
   mutate(Height = !is.na(Height)) %>%
   mutate(Weight = !is.na(Weight)) %>%
+  mutate(Nationality = !is.na(Nationality)) %>%
+  mutate(Occupation = !is.na(Occupation)) %>%
+  mutate(Alma_Mater = !is.na(Alma_Mater)) %>%
+  mutate(Spouse = !is.na(Spouse)) %>%
+  mutate(Child = !is.na(Child)) %>%
   mutate(EyeColor = !is.na(EyeColor)) %>%
+  mutate(Profession = !is.na(Profession)) %>%
+  mutate(Salary = !is.na(Salary)) %>%
+  mutate(Education = !is.na(Education)) %>%
+  mutate(Partner = !is.na(Partner)) %>%
+  mutate(NetWorth = !is.na(NetWorth)) %>%
+  mutate(Parent = !is.na(Parent)) %>%
   mutate(HairColor = !is.na(HairColor)) %>%
-  mutate(HipSize = !is.na(HipSize)) %>%
+  mutate(Univeristy = !is.na(Univeristy)) %>%
+  mutate(Ethnicity = !is.na(Ethnicity)) %>%
+  mutate(Citizenship = !is.na(Citizenship)) %>%
   #calculate the age of participants
-  filter(Birth >= 1922 & Birth < 2022) %>%
-  mutate(Age = 2022 - as.numeric(Birth))
+  mutate(Age = 2022 - as.numeric(Birth))%>%
+  filter(Age>= 25 & Age <100)
 
+# mutate attributes into a grouped one variable
+data_attributes = data_0_1 %>%
+  mutate(Edu_all = ifelse(Alma_Mater==TRUE|Education==TRUE|Univeristy==TRUE, TRUE, FALSE)) %>%
+  mutate(career_all = ifelse(Occupation==TRUE|Profession==TRUE, TRUE, FALSE)) %>%
+  mutate(Income_all = ifelse(Salary==TRUE|NetWorth==TRUE, TRUE, FALSE)) %>%
+  mutate(Relationships_all = ifelse(Partner==TRUE|Spouse==TRUE, TRUE, FALSE)) %>%
+  mutate(Family_all = ifelse(Partner==TRUE|Spouse==TRUE|Child==TRUE|Parent==TRUE, TRUE, FALSE)) %>%
+  mutate(Height_Weight = ifelse(Height==TRUE|Weight==TRUE, TRUE, FALSE)) %>%
+  mutate(Physical_appearance = ifelse(EyeColor==TRUE|HairColor==TRUE, TRUE, FALSE)) %>%
+  select(Age, Gender, Edu_all, career_all, Income_all, Relationships_all, Family_all, Child, Parent, Height_Weight, Physical_appearance)
 
-'''
-variables=["Height","Weight","Eyecolor","Haircolor","Hipsize"]
-
-data_0_1 <- data %>%
-  repeat{
-    mutate()
-  }
-  mutate(selected_variable=! is.na(selected_variable))%>%
-  filter(Age>=0 & Age <=100)%>%
-  mutate(Age=2022-as.numeric(Birth))
-  '''
-
-
-
-# proportion of weight entries
-weight <- data_0_1 %>%
-  group_by(Age,Gender)%>%
-  summarise(weight=mean(Weight))%>%
-  ungroup()
-
-# proportion of height entries
-height <- data_0_1 %>%
+#Calculate the mean 
+education <- data_attributes %>%
   group_by(Age, Gender) %>%
-  summarise(height = mean(Height))%>%
+  summarise(education = mean(Edu_all)) %>%
   ungroup()
 
-eyecolor <- data_0_1 %>%
+career <- data_attributes %>%
   group_by(Age, Gender) %>%
-  summarise(eyecolor = mean(EyeColor))%>%
+  summarise(career = mean(career_all)) %>%
   ungroup()
 
-haircolor <- data_0_1 %>%
+Income <- data_attributes %>%
   group_by(Age, Gender) %>%
-  summarise(haircolor = mean(HairColor))%>%
+  summarise(income = mean(Income_all)) %>%
   ungroup()
 
-hipsize <- data_0_1 %>%
+Relationships <- data_attributes %>%
   group_by(Age, Gender) %>%
-  summarise(hipsize = mean(HipSize))%>%
+  summarise(relationships = mean(Relationships_all)) %>%
+  ungroup()
+
+Family <- data_attributes %>%
+  group_by(Age, Gender) %>%
+  summarise(family = mean(Family_all)) %>%
+  ungroup()
+
+Height_Weight <- data_attributes %>%
+  group_by(Age, Gender) %>%
+  summarise(height_weight = mean(Height_Weight)) %>%
+  ungroup()
+
+Physical_appearance <- data_attributes %>%
+  group_by(Age, Gender) %>%
+  summarise(physical_appearance = mean(Physical_appearance)) %>%
   ungroup()
 
 
-merged <- merge(merge(merge(
-  weight,
-  height,by=c("Age","Gender")),
-  eyecolor,by=c("Age","Gender")),
-  haircolor,by=c("Age","Gender"))
+##Visualisation
+Professional_life <- merge(education,career,by=c("Age","Gender"))
+Private_life <- merge(Relationships,Family,by=c("Age","Gender"))
+Body <- merge(Height_Weight,Physical_appearance,by=c("Age","Gender"))
+Grouped <- merge(Professional_life,Private_life,by=c("Age","Gender"))
+Grouped <- merge(Grouped,Body,by=c("Age","Gender"))
 
 
-# Visualisations 
 #Aggregate
-merged%>%
-  pivot_longer(c(3:6),names_to = "variable",values_to = "proportion")%>%
-  ggplot(aes(x=Age,y=proportion,color=Gender))+
-  facet_wrap(vars(variable),ncol=2)+
-  geom_point()+
+
+Professional_life<- Professional_life%>%
+  pivot_longer(c(3:4),names_to = "variable",values_to = "proportion")
+Private_life <- Private_life %>%
+  pivot_longer(c(3:4),names_to = "variable",values_to = "proportion")
+Body_shape <- Body%>%
+  pivot_longer(c(3:4),names_to = "variable",values_to = "proportion")
+Grouped <- Grouped%>%
+  pivot_longer(c(3:8),names_to = "variable",values_to = "proportion")
+
+
+## Visualisation 
+Professional_life%>%
+  ggplot(aes(x=Age,y=proportion, ymin=0, ymax=proportion, fill=Gender))+
+  facet_wrap(~ variable)+
+  stat_smooth(geom="ribbon", ymin=0, alpha=0.3) +
+  #geom_ribbon(stat=stat_smooth(), alpha=0.3)+
   theme_light()+
-  labs(x= "Age" ,y="Proportion of certain traits mentioned in the age group")
+  labs(x= "Age" ,y="Proportion of professional life mentioned in the age group")
+
+Private_life%>%
+  ggplot(aes(x=Age,y=proportion, ymin=0, ymax=proportion, fill=Gender))+
+  facet_wrap(~ variable)+
+  stat_smooth(geom="ribbon", ymin=0, alpha=0.3) +
+  #geom_ribbon(stat=stat_smooth(), alpha=0.3)+
+  theme_light()+
+  labs(x= "Age" ,y="Proportion of private life mentioned in the age group")
+
+Body_shape%>%
+  ggplot(aes(x=Age,y=proportion, ymin=0, ymax=proportion, fill=Gender))+
+  facet_wrap(~ variable)+
+  stat_smooth(geom="ribbon", ymin=0, alpha=0.3) +
+  #geom_ribbon(stat=stat_smooth(), alpha=0.3)+
+  theme_light()+
+  labs(x= "Age" ,y="Proportion of body shape mentioned in the age group")
 
 
-
-
-'''
-# weight
-ggplot(data = weight) +
-  aes(x = Age, y = weight, color = Gender) +
-  geom_point() +
-  labs(x = "Age", y = "Proportion of people with their weight mentioned") +
-  scale_y_continuous(labels = scales::label_percent()) +
-  theme_light()
-
-# height
-ggplot(data = height) +
-  aes(x = Age, y = height, color = Gender) +
-  geom_point() +
-  labs(x = "Age", y = "Proportion of people with their height mentioned") +
-  scale_y_continuous(labels = scales::label_percent()) +
-  theme_light()
-
+Grouped%>%
+  ggplot(aes(x=Age,y=proportion, ymin=0, ymax=proportion, fill=Gender))+
+  facet_wrap(~ variable,ncol = 2)+
+  stat_smooth(geom="ribbon", ymin=0, alpha=0.3) +
+  #geom_ribbon(stat=stat_smooth(), alpha=0.3)+
+  theme_light()+
+  labs(x= "Age" ,y="Proportion mentioned in the age group")
 
